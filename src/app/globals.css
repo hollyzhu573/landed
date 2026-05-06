@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  /* Colors */
+  --color-background: #FAFAF8;
+  --color-foreground: #2C2C2A;
+
+  /* Sage */
+  --color-sage:              #3A7A42;
+  --color-sage-light:        #DDF0DE;
+  --color-sage-border:       #A8CEB0;
+  --color-sage-text:         #1A5422;
+
+  /* Peach */
+  --color-peach:             #E05830;
+  --color-peach-light:       #FCE0D4;
+  --color-peach-border:      #F0B09A;
+  --color-peach-text:        #8A2810;
+
+  /* Lavender */
+  --color-lavender:          #6655D8;
+  --color-lavender-light:    #E8E4FD;
+  --color-lavender-border:   #C4B8F8;
+  --color-lavender-text:     #3A28B8;
+
+  /* Sky */
+  --color-sky:               #1A78C8;
+  --color-sky-light:         #D8ECFA;
+  --color-sky-border:        #9ACAEE;
+  --color-sky-text:          #0A4A8A;
+
+  /* Honey */
+  --color-honey:             #C07000;
+  --color-honey-light:       #FEEED0;
+  --color-honey-border:      #F0CC78;
+  --color-honey-text:        #6A3A00;
+
+  /* Stone */
+  --color-stone:             #F5F4F0;
+  --color-stone-border:      #DDDBD2;
+  --color-stone-text:        #444441;
+
+  /* Ink / Fern */
+  --color-ink:               #2C2C2A;
+  --color-fern:              #3A7A42;
+
+  /* Sidebar */
+  --color-sidebar-bg:        #182B1C;
+  --color-sidebar-border:    #253D29;
+  --color-sidebar-active:    #24402A;
+  --color-sidebar-text:      rgba(255,255,255,0.62);
+  --color-sidebar-text-active: rgba(255,255,255,0.96);
+
+  /* Text hierarchy */
+  --color-text-primary:      #2C2C2A;
+  --color-text-secondary:    #888780;
+  --color-text-tertiary:     #B4B2A9;
+
+  /* Typography scale */
+  --text-page:        24px;
+  --text-section:     18px;
+  --text-card-title:  15px;
+  --text-body:        13px;
+  --text-label:       11px;
+
+  /* Border radius scale */
+  --radius-input:  4px;
+  --radius-chip:   8px;
+  --radius-card:   12px;
+  --radius-modal:  16px;
+}
+
+/* ─── Tailwind theme extension ──────────────────────────────────────────── */
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Sage */
+  --color-sage:              var(--color-sage);
+  --color-sage-light:        var(--color-sage-light);
+  --color-sage-border:       var(--color-sage-border);
+  --color-sage-text:         var(--color-sage-text);
+
+  /* Peach */
+  --color-peach:             var(--color-peach);
+  --color-peach-light:       var(--color-peach-light);
+  --color-peach-border:      var(--color-peach-border);
+  --color-peach-text:        var(--color-peach-text);
+
+  /* Lavender */
+  --color-lavender:          var(--color-lavender);
+  --color-lavender-light:    var(--color-lavender-light);
+  --color-lavender-border:   var(--color-lavender-border);
+  --color-lavender-text:     var(--color-lavender-text);
+
+  /* Sky */
+  --color-sky:               var(--color-sky);
+  --color-sky-light:         var(--color-sky-light);
+  --color-sky-border:        var(--color-sky-border);
+  --color-sky-text:          var(--color-sky-text);
+
+  /* Honey */
+  --color-honey:             var(--color-honey);
+  --color-honey-light:       var(--color-honey-light);
+  --color-honey-border:      var(--color-honey-border);
+  --color-honey-text:        var(--color-honey-text);
+
+  /* Stone */
+  --color-stone:             var(--color-stone);
+  --color-stone-border:      var(--color-stone-border);
+  --color-stone-text:        var(--color-stone-text);
+
+  /* Ink / Fern */
+  --color-ink:               var(--color-ink);
+  --color-fern:              var(--color-fern);
+
+  /* Border radius */
+  --radius-input:  var(--radius-input);
+  --radius-chip:   var(--radius-chip);
+  --radius-card:   var(--radius-card);
+  --radius-modal:  var(--radius-modal);
+}
+
+/* ─── Keyframes ─────────────────────────────────────────────────────────── */
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes draw-check {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.7); }
+  70%  { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Base styles ───────────────────────────────────────────────────────── */
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
+}
+
+/* ─── Rich textarea placeholder ────────────────────────────────────────── */
+
+[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #d4d4d8; /* zinc-300 */
+  pointer-events: none;
+}
+
+/* ─── Component classes ─────────────────────────────────────────────────── */
+
+.card {
+  background-color: #ffffff;
+  border: 0.5px solid var(--color-stone-border);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.25rem;
+}
+
+.stat-card {
+  background-color: var(--color-stone);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.25rem;
+}
+
+/* Badge base */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  line-height: 1.4;
+}
+
+/* Status badge variants */
+.badge-bookmarked {
+  background-color: var(--color-stone);
+  color: var(--color-stone-text);
+}
+
+.badge-applied {
+  background-color: var(--color-sky-light);
+  color: var(--color-sky-text);
+}
+
+.badge-phone_screen {
+  background-color: var(--color-honey-light);
+  color: var(--color-honey-text);
+}
+
+.badge-interviewing {
+  background-color: var(--color-lavender-light);
+  color: var(--color-lavender-text);
+}
+
+.badge-offer {
+  background-color: var(--color-sage-light);
+  color: var(--color-sage-text);
+}
+
+.badge-rejected {
+  background-color: var(--color-peach-light);
+  color: var(--color-peach-text);
+}
+
+.badge-withdrawn {
+  background-color: var(--color-stone);
+  color: var(--color-stone-text);
+}
