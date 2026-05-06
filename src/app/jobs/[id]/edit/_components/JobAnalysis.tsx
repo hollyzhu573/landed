@@ -75,7 +75,7 @@ export default function JobAnalysis({ jobUrl, jobId }: { jobUrl: string | null; 
           !loading && !apiError && (
             <button
               onClick={generate}
-              className="flex items-center gap-1 rounded-full border border-[var(--color-sky-border)] bg-white/70 px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-sky-text)] transition-colors hover:bg-white"
+              className="flex items-center gap-1 rounded-full border border-[var(--color-sky-border)] bg-white/70 px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-sky-text)] transition-colors hover:border-[var(--color-sky)] hover:bg-white hover:shadow-sm"
             >
               <Sparkles size={10} />
               Generate

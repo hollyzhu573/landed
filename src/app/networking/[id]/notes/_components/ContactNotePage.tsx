@@ -187,7 +187,7 @@ export default function ContactNotePage({ contact, initialNotes }: { contact: Co
       {/* Meeting notes canvas */}
       <div className="mt-8 border-t border-zinc-100 pt-8">
         <p className="mb-4 text-[13px] font-semibold text-zinc-900">Meeting notes</p>
-        <ContactSummary name={name} notes={initialNotes} />
+        <ContactSummary contactId={contact.id} name={name} notes={initialNotes} />
         <MeetingCanvas contactId={contact.id} initialNotes={initialNotes} />
       </div>
 

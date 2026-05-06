@@ -16,11 +16,11 @@ function formatDate(dateStr: string | null) {
 
 // ── Pipeline ────────────────────────────────────────────────────────────────
 
-const PIPELINE_STAGES: { status: JobStatus; color: string; label: string }[] = [
-  { status: 'wishlist',     color: 'bg-[var(--color-stone-border)]', label: 'Wishlist' },
-  { status: 'applied',      color: 'bg-[var(--color-sky)]',          label: 'Applied' },
-  { status: 'interviewing', color: 'bg-[var(--color-lavender)]',     label: 'Interviewing' },
-  { status: 'offer',        color: 'bg-[var(--color-sage)]',         label: 'Offer' },
+const PIPELINE_STAGES: { status: JobStatus; label: string; dot: string }[] = [
+  { status: 'wishlist',     label: 'Wishlist',     dot: 'bg-[var(--color-stone-border)]' },
+  { status: 'applied',      label: 'Applied',      dot: 'bg-[var(--color-sky)]' },
+  { status: 'interviewing', label: 'Interviewing', dot: 'bg-[var(--color-lavender)]' },
+  { status: 'offer',        label: 'Offer',        dot: 'bg-[var(--color-sage)]' },
 ]
 
 const STATUS_BADGE: Record<JobStatus, string> = {
@@ -33,45 +33,34 @@ const STATUS_BADGE: Record<JobStatus, string> = {
 }
 
 function Pipeline({ jobs }: { jobs: Job[] }) {
-  const counts = PIPELINE_STAGES.map(s => ({
-    ...s,
-    count: jobs.filter(j => j.status === s.status).length,
-  }))
-  const total = counts.reduce((sum, s) => sum + s.count, 0)
-  if (total === 0) return null
+  if (jobs.length === 0) return null
 
-  const statusBreakdown: { status: JobStatus; label: string }[] = [
-    { status: 'applied',      label: 'Applied' },
-    { status: 'interviewing', label: 'Interviewing' },
-    { status: 'offer',        label: 'Offer' },
-    { status: 'rejected',     label: 'Rejected' },
-  ]
+  const closed = jobs.filter(j => j.status === 'rejected' || j.status === 'withdrawn').length
 
   return (
     <div className="mb-8 rounded-xl border border-[#DDDBD2] bg-white px-5 py-4">
-      {/* Bar */}
-      <div className="flex h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-        {counts.map(({ status, color, count }) =>
-          count > 0 ? (
-            <div key={status} className={`${color} transition-all`} style={{ width: `${(count / total) * 100}%` }} />
-          ) : null
-        )}
-      </div>
-
-      {/* Counts */}
-      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
-        {statusBreakdown.map(({ status, label }) => {
+      {/* Active stage counts */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        {PIPELINE_STAGES.map(({ status, label, dot }) => {
           const count = jobs.filter(j => j.status === status).length
           return (
-            <div key={status} className="flex items-center gap-2">
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[status]}`}>
-                {label}
-              </span>
-              <span className="font-mono text-[12px] font-semibold text-zinc-600">{count}</span>
+            <div key={status} className="flex items-baseline gap-2">
+              <span className="font-mono text-[22px] font-semibold leading-none text-zinc-800">{count}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                <span className="text-[12px] text-zinc-400">{label}</span>
+              </div>
             </div>
           )
         })}
       </div>
+
+      {/* Closed — muted, not prominent */}
+      {closed > 0 && (
+        <p className="mt-3 border-t border-zinc-100 pt-3 text-[11px] text-zinc-300">
+          {closed} closed
+        </p>
+      )}
     </div>
   )
 }
@@ -129,7 +118,7 @@ export default async function JobsPage() {
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {jobs.map((job) => (
-                  <tr key={job.id} className="group transition-colors hover:bg-zinc-50">
+                  <tr key={job.id} className="transition-colors hover:bg-zinc-50">
                     <td className="px-6 py-4 font-medium text-zinc-900">
                       <InlineEditCell id={job.id} field="company" value={job.company} />
                     </td>

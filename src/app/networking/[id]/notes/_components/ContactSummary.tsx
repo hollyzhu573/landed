@@ -1,19 +1,31 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Sparkles, RotateCcw } from 'lucide-react'
 import type { ContactNote } from '@/src/lib/types'
 
 type Summary = { remember: string[]; actions: string[]; error?: string }
 
 export default function ContactSummary({
+  contactId,
   name,
   notes,
 }: {
+  contactId: string
   name: string
   notes: ContactNote[]
 }) {
-  const [summary, setSummary]   = useState<Summary | null>(null)
+  const cacheKey = `contact-summary:${contactId}`
+
+  const [summary, setSummary] = useState<Summary | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const cached = localStorage.getItem(`contact-summary:${contactId}`)
+      return cached ? (JSON.parse(cached) as Summary) : null
+    } catch {
+      return null
+    }
+  })
   const [loading, setLoading]   = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
@@ -24,7 +36,6 @@ export default function ContactSummary({
     setLoading(true)
     setApiError(null)
     const payload = notes.map(n => n.content + ' ' + n.freeform_note)
-    console.log('[ContactSummary] notes count:', notes.length, 'payload:', payload)
     try {
       const res = await fetch('/api/contact-summary', {
         method: 'POST',
@@ -32,25 +43,20 @@ export default function ContactSummary({
         body: JSON.stringify({ name, notes: payload }),
       })
       const data: Summary = await res.json()
-      console.log('[ContactSummary] response:', data)
       if (data.error) {
         setApiError(data.error)
       } else if (data.remember.length > 0 || data.actions.length > 0) {
         setSummary(data)
+        try { localStorage.setItem(cacheKey, JSON.stringify(data)) } catch { /* quota */ }
       } else {
-        setApiError('API returned empty results — check browser console for details')
+        setApiError('Summary returned empty — add some meeting notes first')
       }
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Could not reach the API')
     } finally {
       setLoading(false)
     }
-  }, [name, notes])
-
-  useEffect(() => {
-    console.log('[ContactSummary] mounted, notes:', notes.length, 'hasContent:', hasContent)
-    if (hasContent) generate()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [name, notes, cacheKey])
 
   if (!hasContent) return null
 
@@ -61,14 +67,26 @@ export default function ContactSummary({
           <Sparkles size={12} />
           <span className="text-[11px] font-semibold uppercase tracking-wider">At a glance</span>
         </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="text-zinc-300 transition-colors hover:text-zinc-500 disabled:opacity-40"
-          aria-label="Regenerate summary"
-        >
-          <RotateCcw size={12} className={loading ? 'animate-spin' : ''} />
-        </button>
+        {summary ? (
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="text-zinc-300 transition-colors hover:text-zinc-500 disabled:opacity-40"
+            aria-label="Regenerate summary"
+          >
+            <RotateCcw size={12} className={loading ? 'animate-spin' : ''} />
+          </button>
+        ) : (
+          !loading && !apiError && (
+            <button
+              onClick={generate}
+              className="flex items-center gap-1 rounded-full border border-[var(--color-sage-border)] bg-white/70 px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-sage-text)] transition-colors hover:border-[var(--color-sage)] hover:bg-white hover:shadow-sm"
+            >
+              <Sparkles size={10} />
+              Generate
+            </button>
+          )
+        )}
       </div>
 
       {loading && !summary && !apiError && (
