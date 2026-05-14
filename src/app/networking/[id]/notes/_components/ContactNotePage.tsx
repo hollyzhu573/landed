@@ -7,6 +7,7 @@ import { saveContactFields } from '@/src/app/networking/actions'
 import type { Contact, ContactNote, ContactStatus } from '@/src/lib/types'
 import MeetingCanvas from './MeetingCanvas'
 import ContactSummary from './ContactSummary'
+import FollowUpSuggestion from './FollowUpSuggestion'
 
 const STATUSES: { value: ContactStatus; label: string }[] = [
   { value: 'to_reach_out', label: 'To reach out' },
@@ -187,7 +188,24 @@ export default function ContactNotePage({ contact, initialNotes }: { contact: Co
       {/* Meeting notes canvas */}
       <div className="mt-8 border-t border-zinc-100 pt-8">
         <p className="mb-4 text-[13px] font-semibold text-zinc-900">Meeting notes</p>
-        <ContactSummary contactId={contact.id} name={name} notes={initialNotes} />
+        <ContactSummary
+          contactId={contact.id}
+          name={name}
+          role={role || undefined}
+          company={company || undefined}
+          howWeMet={howWeMet || undefined}
+          notes={initialNotes}
+        />
+        {contact.follow_up_due && contact.follow_up_due <= new Date().toISOString().split('T')[0] && status !== 'dormant' && (
+          <FollowUpSuggestion
+            name={name}
+            role={role || undefined}
+            company={company || undefined}
+            howWeMet={howWeMet || undefined}
+            lastContactDate={lastContactDate || undefined}
+            notes={initialNotes}
+          />
+        )}
         <MeetingCanvas contactId={contact.id} initialNotes={initialNotes} />
       </div>
 

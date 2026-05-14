@@ -161,17 +161,6 @@ export function generateSuggestions(jobs: Job[], contacts: Contact[], today: str
     })
   }
 
-  // Jobs missing portfolio link
-  const missingPortfolio = applied.filter(j => !j.portfolio_link)
-  if (missingPortfolio.length >= 2) {
-    suggestions.push({
-      id: 'missing-portfolio',
-      kind: 'tip',
-      title: `${missingPortfolio.length} applications have no portfolio link recorded.`,
-      body: "Tracking which version you sent helps you tailor follow-ups and understand what's resonating.",
-      href: '/jobs',
-    })
-  }
 
   // Empty state tip
   if (jobs.length === 0) {

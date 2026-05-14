@@ -1,18 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/src/lib/supabase/server'
 import type { Job, JobStatus } from '@/src/lib/types'
-import StatusSelect from '@/src/app/jobs/_components/StatusSelect'
-import JobRowActions from '@/src/app/jobs/_components/JobRowActions'
-import InlineEditCell from '@/src/app/jobs/_components/InlineEditCell'
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
+import JobsTable from '@/src/app/jobs/_components/JobsTable'
 
 // ── Pipeline ────────────────────────────────────────────────────────────────
 
@@ -104,47 +93,7 @@ export default async function JobsPage() {
       ) : (
         <>
           <Pipeline jobs={jobs} />
-
-          <div className="overflow-hidden rounded-xl border border-[#DDDBD2] bg-white">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50/70 text-left text-[11px] font-semibold text-zinc-400">
-                  <th className="px-6 py-3">Company</th>
-                  <th className="px-6 py-3">Role</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Applied</th>
-                  <th className="px-6 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {jobs.map((job) => (
-                  <tr key={job.id} className="transition-colors hover:bg-zinc-50">
-                    <td className="px-6 py-4 font-medium text-zinc-900">
-                      <InlineEditCell id={job.id} field="company" value={job.company} />
-                    </td>
-                    <td className="px-6 py-4 text-zinc-600">
-                      <InlineEditCell id={job.id} field="role" value={job.role} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusSelect id={job.id} status={job.status} />
-                    </td>
-                    <td className="px-6 py-4 font-mono text-[12px] text-zinc-400">
-                      <InlineEditCell
-                        id={job.id}
-                        field="date_applied"
-                        value={job.date_applied}
-                        display={formatDate(job.date_applied)}
-                        type="date"
-                      />
-                    </td>
-                    <td className="px-4 py-4">
-                      <JobRowActions id={job.id} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <JobsTable jobs={jobs} />
         </>
       )}
     </div>

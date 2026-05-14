@@ -63,7 +63,7 @@ function StatCard({
   return (
     <Link
       href={href}
-      className={`group flex items-center justify-between rounded-xl border px-5 py-5 transition-colors ${cardClass}`}
+      className={`group flex items-center justify-between rounded-xl border px-5 py-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm ${cardClass}`}
     >
       <div>
         <p className="text-[11px] font-semibold text-zinc-500 tracking-wide">{label}</p>
@@ -167,33 +167,33 @@ export default async function DashboardPage() {
 
       {/* Stat cards */}
       <div className="mb-10 grid grid-cols-3 gap-4">
-        <StatCard
-          label="Applications"
-          value={allJobs.length}
-          icon={Briefcase}
-          href="/jobs"
-          cardClass="bg-[var(--color-sky-light)] border-[var(--color-sky-border)] hover:border-[var(--color-sky)]"
-          valueClass="text-[var(--color-sky-text)]"
-          iconColor="text-[var(--color-sky)] opacity-60 group-hover:opacity-100"
-        />
-        <StatCard
-          label="Active pipeline"
-          value={activeJobs.length}
-          icon={Briefcase}
-          href="/jobs"
-          cardClass="bg-[var(--color-lavender-light)] border-[var(--color-lavender-border)] hover:border-[var(--color-lavender)]"
-          valueClass="text-[var(--color-lavender-text)]"
-          iconColor="text-[var(--color-lavender)] opacity-60 group-hover:opacity-100"
-        />
-        <StatCard
-          label="Contacts"
-          value={activeContacts.length}
-          icon={Users}
-          href="/networking"
-          cardClass="bg-[var(--color-sage-light)] border-[var(--color-sage-border)] hover:border-[var(--color-sage)]"
-          valueClass="text-[var(--color-sage-text)]"
-          iconColor="text-[var(--color-sage)] opacity-60 group-hover:opacity-100"
-        />
+        {([
+          {
+            label: 'Applications', value: allJobs.length, icon: Briefcase, href: '/jobs',
+            cardClass: 'bg-[var(--color-sky-light)] border-[var(--color-sky-border)] hover:border-[var(--color-sky)]',
+            valueClass: 'text-[var(--color-sky-text)]',
+            iconColor: 'text-[var(--color-sky)] opacity-60 group-hover:opacity-100',
+          },
+          {
+            label: 'Active pipeline', value: activeJobs.length, icon: Briefcase, href: '/jobs',
+            cardClass: 'bg-[var(--color-lavender-light)] border-[var(--color-lavender-border)] hover:border-[var(--color-lavender)]',
+            valueClass: 'text-[var(--color-lavender-text)]',
+            iconColor: 'text-[var(--color-lavender)] opacity-60 group-hover:opacity-100',
+          },
+          {
+            label: 'Contacts', value: activeContacts.length, icon: Users, href: '/networking',
+            cardClass: 'bg-[var(--color-sage-light)] border-[var(--color-sage-border)] hover:border-[var(--color-sage)]',
+            valueClass: 'text-[var(--color-sage-text)]',
+            iconColor: 'text-[var(--color-sage)] opacity-60 group-hover:opacity-100',
+          },
+        ]).map((card, i) => (
+          <div
+            key={card.label}
+            style={{ animation: 'fade-up 0.4s ease-out both', animationDelay: `${i * 80}ms` }}
+          >
+            <StatCard {...card} />
+          </div>
+        ))}
       </div>
 
       {/* Follow-ups due */}

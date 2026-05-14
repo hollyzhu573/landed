@@ -9,10 +9,16 @@ type Summary = { remember: string[]; actions: string[]; error?: string }
 export default function ContactSummary({
   contactId,
   name,
+  role,
+  company,
+  howWeMet,
   notes,
 }: {
   contactId: string
   name: string
+  role?: string
+  company?: string
+  howWeMet?: string
   notes: ContactNote[]
 }) {
   const cacheKey = `contact-summary:${contactId}`
@@ -40,7 +46,7 @@ export default function ContactSummary({
       const res = await fetch('/api/contact-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, notes: payload }),
+        body: JSON.stringify({ name, role, company, howWeMet, notes: payload }),
       })
       const data: Summary = await res.json()
       if (data.error) {
@@ -56,7 +62,7 @@ export default function ContactSummary({
     } finally {
       setLoading(false)
     }
-  }, [name, notes, cacheKey])
+  }, [name, role, company, howWeMet, notes, cacheKey])
 
   if (!hasContent) return null
 

@@ -70,8 +70,13 @@ export default function SuggestionsWidget({ suggestions }: { suggestions: Sugges
     <section>
       <h2 className="mb-4 text-[13px] font-semibold text-zinc-900">For you</h2>
       <div className="space-y-3">
-        {suggestions.map(s => (
-          <SuggestionCard key={s.id} s={s} />
+        {suggestions.map((s, i) => (
+          <div
+            key={s.id}
+            style={{ animation: 'fade-up 0.4s ease-out both', animationDelay: `${200 + i * 60}ms` }}
+          >
+            <SuggestionCard s={s} />
+          </div>
         ))}
       </div>
     </section>

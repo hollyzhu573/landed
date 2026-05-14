@@ -103,7 +103,7 @@ export default function SearchPalette() {
     if (entry.type === 'job') {
       router.push(`/jobs/${entry.item.id}/edit`)
     } else {
-      router.push(`/networking`)
+      router.push(`/networking/${entry.item.id}/notes`)
     }
     setOpen(false)
   }, [flatItems, router, setOpen])

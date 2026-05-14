@@ -109,15 +109,15 @@ export default function FollowUpCalendar({ contacts }: { contacts: Contact[] }) 
             <div key={i} className="flex h-9 flex-col items-center justify-center gap-0.5">
               <div className={`
                 flex h-6 w-6 items-center justify-center rounded-full text-[12px] leading-none
-                ${isToday ? 'bg-zinc-900 font-semibold text-white' : 'text-zinc-600'}
+                ${isToday ? 'bg-zinc-900 font-semibold text-white scale-110' : 'text-zinc-600'}
                 ${hasFollowUp && !isToday ? 'font-semibold text-zinc-900' : ''}
               `}>
                 {day}
               </div>
               {hasFollowUp && (
                 <div className={`h-1 w-1 rounded-full ${
-                  isOverdue  ? 'bg-[var(--color-peach)]' :
-                  isDueToday ? 'bg-[var(--color-honey)]' :
+                  isOverdue  ? 'bg-[var(--color-peach)] animate-pulse' :
+                  isDueToday ? 'bg-[var(--color-honey)] animate-pulse' :
                                'bg-[var(--color-sage)]'
                 }`} />
               )}

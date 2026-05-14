@@ -21,7 +21,6 @@ export type Job = {
   date_applied: string | null
   location: string | null
   job_url: string | null
-  portfolio_link: string | null
   notes: string | null
   created_at: string
   updated_at: string

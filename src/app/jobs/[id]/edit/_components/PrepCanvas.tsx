@@ -90,6 +90,7 @@ export default function PrepCanvas({
           section={section}
           company={job.company}
           role={job.role}
+          jobUrl={job.job_url ?? undefined}
           onDelete={() => setSections(prev => prev.filter(s => s.id !== section.id))}
           onAddBlock={category => addBlock(category, section.id)}
           adding={adding}

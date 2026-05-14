@@ -122,6 +122,7 @@ export default function PrepBlock({
   section,
   company,
   role,
+  jobUrl,
   onDelete,
   onAddBlock,
   adding,
@@ -129,6 +130,7 @@ export default function PrepBlock({
   section: PrepSection
   company: string
   role: string
+  jobUrl?: string
   onDelete: () => void
   onAddBlock: (category: PrepCategory) => void
   adding: boolean
@@ -138,6 +140,7 @@ export default function PrepBlock({
   const [content, setContent]           = useState(section.answer)
   const [note, setNote]                 = useState(section.freeform_note)
   const [suggestions, setSuggestions]   = useState<string[] | null>(null)
+  const [suggestError, setSuggestError] = useState<string | null>(null)
   const [saveState, setSaveState]       = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [hovered, setHovered]           = useState(false)
   const [interviewDate, setInterviewDate] = useState<string>(section.interview_date ?? '')
@@ -148,30 +151,46 @@ export default function PrepBlock({
 
   const richRef = useRef<RichTextareaHandle>(null)
 
-  // Fetch AI suggestions; fall back to static list so chips always appear
+  // Fetch AI suggestions only for newly-created empty blocks
   useEffect(() => {
+    if (section.answer.trim()) {
+      // Block already has content — no need to fetch
+      return
+    }
     let cancelled = false
     async function load() {
       try {
         const res = await fetch('/api/prep-suggestions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company, role, category: section.category }),
+          body: JSON.stringify({ company, role, category: section.category, jobUrl }),
         })
-        if (!res.ok || cancelled) {
-          if (!cancelled) setSuggestions(meta.fallback)
+        if (cancelled) return
+        if (!res.ok) {
+          const errText = await res.text()
+          console.error('[prep-suggestions] API error', res.status, errText)
+          setSuggestError(`${res.status}: ${errText}`)
+          setSuggestions(meta.fallback)
           return
         }
         const data = await res.json()
+        console.log('[prep-suggestions] response:', data)
         const items = (data.suggestions as string[]) ?? []
         if (!cancelled) setSuggestions(items.length > 0 ? items : meta.fallback)
-      } catch {
-        if (!cancelled) setSuggestions(meta.fallback)
+        if (items.length === 0 && !cancelled) setSuggestError(`empty — ${data.debug ?? 'no debug info'}`)
+      } catch (err) {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error('[prep-suggestions] fetch error', msg)
+          setSuggestError(msg)
+          setSuggestions(meta.fallback)
+        }
       }
     }
     load()
     return () => { cancelled = true }
-  }, [company, role, section.category, meta.fallback])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const save = useCallback(async (value: string) => {
     setSaveState('saving')
@@ -294,6 +313,13 @@ export default function PrepBlock({
             </button>
           </div>
         </div>
+
+        {/* Suggestion error */}
+        {suggestError && (
+          <div className="border-t border-zinc-50 px-4 pt-2 pb-1">
+            <p className="font-mono text-[11px] text-red-400">AI suggestions error: {suggestError}</p>
+          </div>
+        )}
 
         {/* Suggestion chips */}
         {suggestions !== null && suggestions.length > 0 && (
