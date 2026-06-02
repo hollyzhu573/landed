@@ -19,29 +19,10 @@ export type Job = {
   role: string
   status: JobStatus
   date_applied: string | null
+  interview_date: string | null
   location: string | null
   job_url: string | null
   notes: string | null
-  created_at: string
-  updated_at: string
-}
-
-export type PrepCategory =
-  | 'behavioral'
-  | 'portfolio'
-  | 'take_home'
-  | 'product_critique'
-  | 'hiring_manager'
-  | 'whiteboard'
-
-export type PrepSection = {
-  id: string
-  job_id: string
-  category: PrepCategory
-  answer: string
-  sort_order: number
-  interview_date: string | null
-  freeform_note: string
   created_at: string
   updated_at: string
 }
@@ -55,6 +36,49 @@ export type ContactNote = {
   content: string
   freeform_note: string
   meeting_date: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type ResumeExperience = {
+  company: string
+  role: string
+  start_date: string | null
+  end_date: string | null
+  bullets: string[]
+}
+
+export type ResumeEducation = {
+  school: string
+  degree: string | null
+  field: string | null
+  graduation_year: string | null
+}
+
+export type UserProfile = {
+  id: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  location: string | null
+  linkedin_url: string | null
+  portfolio_url: string | null
+  summary: string | null
+  skills: string[]
+  tools: string[]
+  experience: ResumeExperience[]
+  education: ResumeEducation[]
+  resume_filename: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type QuestionBankEntry = {
+  id: string
+  question: string
+  answer: string
+  source: string | null
   sort_order: number
   created_at: string
   updated_at: string

@@ -1,47 +1,19 @@
 import Link from 'next/link'
 import { createClient } from '@/src/lib/supabase/server'
-import type { Job, Contact, ContactStatus } from '@/src/lib/types'
+import type { Job, Contact, JobStatus } from '@/src/lib/types'
 import { Briefcase, Users, AlertCircle } from 'lucide-react'
 import QuickApply from '@/src/app/dashboard/_components/QuickApply'
-import SuggestionsWidget from '@/src/app/dashboard/_components/SuggestionsWidget'
 import FollowUpCalendar from '@/src/app/dashboard/_components/FollowUpCalendar'
-import { generateSuggestions } from '@/src/lib/suggestions'
 
-const CONTACT_STATUS_STYLES: Record<ContactStatus, string> = {
-  to_reach_out: 'bg-[var(--color-stone)] text-[var(--color-stone-text)]',
-  reached_out:  'bg-[var(--color-sky-light)] text-[var(--color-sky-text)]',
-  following_up: 'bg-[var(--color-honey-light)] text-[var(--color-honey-text)]',
-  connected:    'bg-[var(--color-sage-light)] text-[var(--color-sage-text)]',
-  dormant:      'bg-[var(--color-stone)] text-[var(--color-text-tertiary)]',
-}
+// ── Pipeline stages for stat cards ──────────────────────────────────────────
 
-const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
-  to_reach_out: 'To reach out',
-  reached_out:  'Reached out',
-  following_up: 'Following up',
-  connected:    'Connected',
-  dormant:      'Dormant',
-}
+const PIPELINE_STAGES: { status: JobStatus; label: string }[] = [
+  { status: 'applied',      label: 'Applied' },
+  { status: 'interviewing', label: 'Interviewing' },
+  { status: 'offer',        label: 'Offer' },
+]
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function daysOverdue(dueDateStr: string): number {
-  const due = new Date(dueDateStr)
-  const today = new Date()
-  due.setHours(0, 0, 0, 0)
-  today.setHours(0, 0, 0, 0)
-  return Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────
+// ── Stat card ────────────────────────────────────────────────────────────────
 
 function StatCard({
   label,
@@ -74,52 +46,25 @@ function StatCard({
   )
 }
 
-
-function ContactStatusBadge({ status }: { status: ContactStatus }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${CONTACT_STATUS_STYLES[status]}`}>
-      {CONTACT_STATUS_LABELS[status]}
-    </span>
-  )
-}
-
 // ── Encouragement message ──────────────────────────────────────────────────
 
 function getDashboardMessage(jobs: Job[]): { headline: string; sub: string } {
-  const today = new Date().toISOString().split('T')[0]
+  const today   = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-  const total = jobs.length
-  const appliedToday = jobs.filter((j) => j.date_applied === today).length
-  const appliedThisWeek = jobs.filter((j) => j.date_applied && j.date_applied >= weekAgo).length
+  const total            = jobs.length
+  const appliedToday     = jobs.filter((j) => j.date_applied === today).length
+  const appliedThisWeek  = jobs.filter((j) => j.date_applied && j.date_applied >= weekAgo).length
 
-  if (appliedToday > 0) return {
-    headline: "You showed up today.",
-    sub: "That's genuinely all this takes — keep going at whatever pace works for you.",
-  }
-  if (appliedThisWeek >= 3) return {
-    headline: "You've been consistent this week.",
-    sub: "Consistency is the only thing you can actually control. You're doing it.",
-  }
-  if (total >= 20) return {
-    headline: "You've applied to a lot of places.",
-    sub: "That's a lot of courage in a row. The right one is in there somewhere.",
-  }
-  if (total >= 10) return {
-    headline: `${total} applications out in the world.`,
-    sub: "Each one is a real shot. You're doing the work — that's what matters.",
-  }
-  if (total >= 1) return {
-    headline: "You've put yourself out there.",
-    sub: "That's the hardest part. Keep adding to it whenever you're ready.",
-  }
-  return {
-    headline: "No pressure. Just paste a link when you're ready.",
-    sub: "This is your space to track everything in one place.",
-  }
+  if (appliedToday > 0)     return { headline: "You showed up today.",           sub: "That's genuinely all this takes — keep going at whatever pace works for you." }
+  if (appliedThisWeek >= 3) return { headline: "You've been consistent this week.", sub: "Consistency is the only thing you can actually control. You're doing it." }
+  if (total >= 20)          return { headline: "You've applied to a lot of places.", sub: "That's a lot of courage in a row. The right one is in there somewhere." }
+  if (total >= 10)          return { headline: `${total} applications out in the world.`, sub: "Each one is a real shot. You're doing the work — that's what matters." }
+  if (total >= 1)           return { headline: "You've put yourself out there.",   sub: "That's the hardest part. Keep adding to it whenever you're ready." }
+  return { headline: "No pressure. Just paste a link when you're ready.", sub: "This is your space to track everything in one place." }
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+// ── Page ────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -132,25 +77,12 @@ export default async function DashboardPage() {
 
   const dbError = jobsErr ?? contactsErr ?? null
 
-  const allJobs = jobs ?? []
+  const allJobs     = jobs ?? []
   const allContacts = contacts ?? []
   const { headline, sub } = getDashboardMessage(allJobs)
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().split('T')[0]
-
-  const activeJobs = allJobs.filter((j) =>
-    ['applied', 'interviewing', 'offer'].includes(j.status)
-  )
-  const suggestions = generateSuggestions(allJobs, allContacts, todayStr)
-
-  const followUpsDue = allContacts.filter(
-    (c) => c.follow_up_due && c.follow_up_due <= todayStr && c.status !== 'dormant'
-  )
-  const activeContacts = allContacts.filter((c) =>
-    ['to_reach_out', 'reached_out', 'following_up', 'connected'].includes(c.status)
-  )
+  const activeJobs    = allJobs.filter(j => ['applied', 'interviewing', 'offer'].includes(j.status))
+  const activeContacts = allContacts.filter(c => ['to_reach_out', 'reached_out', 'following_up', 'connected'].includes(c.status))
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -170,21 +102,21 @@ export default async function DashboardPage() {
         {([
           {
             label: 'Applications', value: allJobs.length, icon: Briefcase, href: '/jobs',
-            cardClass: 'bg-[var(--color-sky-light)] border-[var(--color-sky-border)] hover:border-[var(--color-sky)]',
+            cardClass:  'bg-[var(--color-sky-light)] border-[var(--color-sky-border)] hover:border-[var(--color-sky)]',
             valueClass: 'text-[var(--color-sky-text)]',
-            iconColor: 'text-[var(--color-sky)] opacity-60 group-hover:opacity-100',
+            iconColor:  'text-[var(--color-sky)] opacity-60 group-hover:opacity-100',
           },
           {
             label: 'Active pipeline', value: activeJobs.length, icon: Briefcase, href: '/jobs',
-            cardClass: 'bg-[var(--color-lavender-light)] border-[var(--color-lavender-border)] hover:border-[var(--color-lavender)]',
+            cardClass:  'bg-[var(--color-lavender-light)] border-[var(--color-lavender-border)] hover:border-[var(--color-lavender)]',
             valueClass: 'text-[var(--color-lavender-text)]',
-            iconColor: 'text-[var(--color-lavender)] opacity-60 group-hover:opacity-100',
+            iconColor:  'text-[var(--color-lavender)] opacity-60 group-hover:opacity-100',
           },
           {
             label: 'Contacts', value: activeContacts.length, icon: Users, href: '/networking',
-            cardClass: 'bg-[var(--color-sage-light)] border-[var(--color-sage-border)] hover:border-[var(--color-sage)]',
+            cardClass:  'bg-[var(--color-sage-light)] border-[var(--color-sage-border)] hover:border-[var(--color-sage)]',
             valueClass: 'text-[var(--color-sage-text)]',
-            iconColor: 'text-[var(--color-sage)] opacity-60 group-hover:opacity-100',
+            iconColor:  'text-[var(--color-sage)] opacity-60 group-hover:opacity-100',
           },
         ]).map((card, i) => (
           <div
@@ -196,63 +128,46 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Follow-ups due */}
-      {followUpsDue.length > 0 && (
-        <section className="mb-10">
-          <div className="mb-4 flex items-center gap-2.5">
-            <AlertCircle size={14} className="text-[var(--color-honey)]" />
-            <h2 className="text-[13px] font-semibold text-zinc-900">
-              Follow-ups due
-            </h2>
-            <span className="rounded-full bg-[var(--color-honey-light)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-honey-text)]">
-              {followUpsDue.length}
-            </span>
+      {/* Calendar */}
+      <div className="rounded-xl border border-[#DDDBD2] bg-white px-5 py-5">
+        <h2 className="mb-4 text-[13px] font-semibold text-zinc-900">Calendar</h2>
+        <div className="flex gap-8">
+          <div className="w-64 shrink-0">
+            <FollowUpCalendar contacts={allContacts} jobs={allJobs} />
           </div>
-          <div className="overflow-hidden rounded-xl border border-[var(--color-honey-border)] bg-white">
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-zinc-100">
-                {followUpsDue.map((contact) => {
-                  const overdueDays = contact.follow_up_due ? daysOverdue(contact.follow_up_due) : 0
-                  return (
-                    <tr key={contact.id} className="transition-colors hover:bg-zinc-50">
-                      <td className="px-6 py-3.5 font-medium text-zinc-900">{contact.name}</td>
-                      <td className="px-6 py-3.5 text-zinc-500">
-                        {contact.role && contact.company
-                          ? `${contact.role} @ ${contact.company}`
-                          : contact.company ?? contact.role ?? '—'}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <ContactStatusBadge status={contact.status} />
-                      </td>
-                      <td className="px-6 py-3.5 text-right text-xs">
-                        {overdueDays === 0 ? (
-                          <span className="font-medium text-[var(--color-honey-text)]">Due today</span>
-                        ) : (
-                          <span className="font-medium text-[var(--color-peach-text)]">{overdueDays}d overdue</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="min-w-0 flex-1 border-l border-zinc-100 pl-8">
+            <Legend />
           </div>
-        </section>
-      )}
-
-      <div className="flex items-start gap-8">
-
-        <div className="min-w-0 flex-1">
-          <SuggestionsWidget suggestions={suggestions} />
         </div>
-
-        {/* Follow-up calendar */}
-        <section className="w-64 shrink-0">
-          <h2 className="mb-4 text-[13px] font-semibold text-zinc-900">Follow-ups</h2>
-          <FollowUpCalendar contacts={allContacts} />
-        </section>
-
       </div>
+
+    </div>
+  )
+}
+
+function Legend() {
+  return (
+    <div className="flex flex-col gap-3 pt-1">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Key</p>
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-lavender)]" />
+        <span className="text-[12px] text-zinc-500">Interview scheduled</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-sage)]" />
+        <span className="text-[12px] text-zinc-500">Follow-up due</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-honey)]" />
+        <span className="text-[12px] text-zinc-500">Due today</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-peach)]" />
+        <span className="text-[12px] text-zinc-500">Overdue</span>
+      </div>
+      <p className="mt-4 text-[11px] leading-relaxed text-zinc-400">
+        Set interview dates on any job to see them here. Follow-up dates come from your networking contacts.
+      </p>
     </div>
   )
 }

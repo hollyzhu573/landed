@@ -99,6 +99,7 @@ export async function saveJobFields(
     role: string
     status: JobStatus
     date_applied: string | null
+    interview_date: string | null
     location: string | null
     job_url: string | null
     notes: string | null

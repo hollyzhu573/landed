@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink, Check } from 'lucide-react'
 import { saveJobFields } from '@/src/app/jobs/actions'
-import type { Job, JobStatus, PrepSection } from '@/src/lib/types'
-import PrepCanvas from './PrepCanvas'
+import type { Job, JobStatus } from '@/src/lib/types'
 import JobAnalysis from './JobAnalysis'
 
 // ── Status config ────────────────────────────────────────────────────────────
@@ -30,13 +29,7 @@ const STATUS_STYLES: Record<JobStatus, string> = {
 
 // ── Inline property row ──────────────────────────────────────────────────────
 
-function Property({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
+function Property({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4 py-1.5">
       <span className="w-32 shrink-0 pt-px text-sm text-zinc-400">{label}</span>
@@ -47,19 +40,15 @@ function Property({
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function JobNotePage({
-  job,
-  initialSections,
-}: {
-  job: Job
-  initialSections: PrepSection[]
-}) {
-  const [company,     setCompany]     = useState(job.company)
-  const [role,        setRole]        = useState(job.role)
-  const [status,      setStatus]      = useState<JobStatus>(job.status)
-  const [dateApplied, setDateApplied] = useState(job.date_applied ?? '')
-  const [location,    setLocation]    = useState(job.location ?? '')
-  const [jobUrl,      setJobUrl]      = useState(job.job_url ?? '')
+export default function JobNotePage({ job }: { job: Job }) {
+  const [company,       setCompany]       = useState(job.company)
+  const [role,          setRole]          = useState(job.role)
+  const [status,        setStatus]        = useState<JobStatus>(job.status)
+  const [dateApplied,   setDateApplied]   = useState(job.date_applied ?? '')
+  const [interviewDate, setInterviewDate] = useState(job.interview_date ?? '')
+  const [location,      setLocation]      = useState(job.location ?? '')
+  const [jobUrl,        setJobUrl]        = useState(job.job_url ?? '')
+  const [notes,         setNotes]         = useState(job.notes ?? '')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const save = useCallback(async (updates: Parameters<typeof saveJobFields>[1]) => {
@@ -142,6 +131,16 @@ export default function JobNotePage({
           />
         </Property>
 
+        <Property label="Interview date">
+          <input
+            type="date"
+            value={interviewDate}
+            onChange={e => setInterviewDate(e.target.value)}
+            onBlur={() => save({ interview_date: interviewDate || null })}
+            className="bg-transparent focus:outline-none"
+          />
+        </Property>
+
         <Property label="Location">
           <input
             type="text"
@@ -182,12 +181,15 @@ export default function JobNotePage({
         <JobAnalysis jobUrl={jobUrl || null} jobId={job.id} />
       </div>
 
-      {/* Prep sections */}
+      {/* Freeform notes */}
       <div className="mt-8 border-t border-zinc-100 pt-8">
-        <PrepCanvas
-          job={job}
-          initialSections={initialSections}
-          currentStatus={status}
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          onBlur={() => save({ notes: notes || null })}
+          placeholder="Notes…"
+          rows={6}
+          className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-zinc-700 placeholder:text-zinc-300 focus:outline-none"
         />
       </div>
 
