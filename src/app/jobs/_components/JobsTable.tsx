@@ -21,22 +21,29 @@ function formatDate(dateStr: string | null) {
   })
 }
 
+function compareJobs(a: Job, b: Job, key: SortKey, dir: SortDir): number {
+  let cmp = 0
+  if (key === 'status') {
+    cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+  } else if (key === 'date_applied') {
+    const da = a.date_applied ?? ''
+    const db = b.date_applied ?? ''
+    cmp = da < db ? -1 : da > db ? 1 : 0
+  } else {
+    const va = (a[key] ?? '').toLowerCase()
+    const vb = (b[key] ?? '').toLowerCase()
+    cmp = va < vb ? -1 : va > vb ? 1 : 0
+  }
+  return dir === 'asc' ? cmp : -cmp
+}
+
 function sortJobs(jobs: Job[], key: SortKey, dir: SortDir): Job[] {
-  return [...jobs].sort((a, b) => {
-    let cmp = 0
-    if (key === 'status') {
-      cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
-    } else if (key === 'date_applied') {
-      const da = a.date_applied ?? ''
-      const db = b.date_applied ?? ''
-      cmp = da < db ? -1 : da > db ? 1 : 0
-    } else {
-      const va = (a[key] ?? '').toLowerCase()
-      const vb = (b[key] ?? '').toLowerCase()
-      cmp = va < vb ? -1 : va > vb ? 1 : 0
-    }
-    return dir === 'asc' ? cmp : -cmp
-  })
+  const interviewing = jobs.filter(j => j.status === 'interviewing')
+  const rest         = jobs.filter(j => j.status !== 'interviewing')
+  return [
+    ...interviewing.sort((a, b) => compareJobs(a, b, key, dir)),
+    ...rest.sort((a, b) => compareJobs(a, b, key, dir)),
+  ]
 }
 
 function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
@@ -87,7 +94,10 @@ export default function JobsTable({ jobs: initialJobs }: { jobs: Job[] }) {
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {jobs.map((job) => (
-            <tr key={job.id} className="transition-colors hover:bg-zinc-50">
+            <tr
+              key={job.id}
+              className={`transition-colors hover:bg-zinc-50 ${job.status === 'interviewing' ? 'bg-[var(--color-lavender-light,#f5f3ff)]' : ''}`}
+            >
               <td className="px-6 py-4 font-medium text-zinc-900">
                 <InlineEditCell id={job.id} field="company" value={job.company} />
               </td>

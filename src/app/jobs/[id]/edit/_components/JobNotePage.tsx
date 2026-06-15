@@ -4,8 +4,9 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink, Check } from 'lucide-react'
 import { saveJobFields } from '@/src/app/jobs/actions'
-import type { Job, JobStatus } from '@/src/lib/types'
+import type { Job, JobPrepQuestion, JobStatus, PrepCategory } from '@/src/lib/types'
 import JobAnalysis from './JobAnalysis'
+import JobPrepSection from './JobPrepSection'
 
 // ── Status config ────────────────────────────────────────────────────────────
 
@@ -40,7 +41,11 @@ function Property({ label, children }: { label: string; children: React.ReactNod
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function JobNotePage({ job }: { job: Job }) {
+export default function JobNotePage({ job, prepQuestions, bankQuestions }: {
+  job: Job
+  prepQuestions: JobPrepQuestion[]
+  bankQuestions: { question: string; category: PrepCategory | null }[]
+}) {
   const [company,       setCompany]       = useState(job.company)
   const [role,          setRole]          = useState(job.role)
   const [status,        setStatus]        = useState<JobStatus>(job.status)
@@ -48,7 +53,6 @@ export default function JobNotePage({ job }: { job: Job }) {
   const [interviewDate, setInterviewDate] = useState(job.interview_date ?? '')
   const [location,      setLocation]      = useState(job.location ?? '')
   const [jobUrl,        setJobUrl]        = useState(job.job_url ?? '')
-  const [notes,         setNotes]         = useState(job.notes ?? '')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const save = useCallback(async (updates: Parameters<typeof saveJobFields>[1]) => {
@@ -181,16 +185,9 @@ export default function JobNotePage({ job }: { job: Job }) {
         <JobAnalysis jobUrl={jobUrl || null} jobId={job.id} />
       </div>
 
-      {/* Freeform notes */}
+      {/* Interview prep */}
       <div className="mt-8 border-t border-zinc-100 pt-8">
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          onBlur={() => save({ notes: notes || null })}
-          placeholder="Notes…"
-          rows={6}
-          className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-zinc-700 placeholder:text-zinc-300 focus:outline-none"
-        />
+        <JobPrepSection job={job} initialQuestions={prepQuestions} bankQuestions={bankQuestions} />
       </div>
 
     </div>

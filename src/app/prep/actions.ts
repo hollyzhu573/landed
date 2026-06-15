@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/src/lib/supabase/server'
-import type { QuestionBankEntry } from '@/src/lib/types'
+import type { PrepCategory, QuestionBankEntry } from '@/src/lib/types'
 
-export async function createQuestion(): Promise<QuestionBankEntry> {
+export async function createQuestion(category: PrepCategory | null = null): Promise<QuestionBankEntry> {
   const supabase = await createClient()
   const { data: last } = await supabase
     .from('question_bank')
@@ -17,7 +17,7 @@ export async function createQuestion(): Promise<QuestionBankEntry> {
 
   const { data, error } = await supabase
     .from('question_bank')
-    .insert({ question: '', answer: '', sort_order: sortOrder })
+    .insert({ question: '', answer: '', category: category ?? null, sort_order: sortOrder })
     .select()
     .single<QuestionBankEntry>()
 
@@ -49,6 +49,15 @@ export async function updateSource(id: string, source: string | null): Promise<v
   const { error } = await supabase
     .from('question_bank')
     .update({ source, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function updateCategory(id: string, category: PrepCategory | null): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('question_bank')
+    .update({ category, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw new Error(error.message)
 }

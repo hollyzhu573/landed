@@ -74,11 +74,26 @@ export type UserProfile = {
   updated_at: string
 }
 
+export type PrepCategory = 'behavioral' | 'portfolio' | 'case_study' | 'technical' | 'other'
+
 export type QuestionBankEntry = {
   id: string
   question: string
   answer: string
+  category: PrepCategory | null
   source: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type JobPrepQuestion = {
+  id: string
+  job_id: string
+  question: string
+  answer: string
+  category: PrepCategory
+  rationale: string | null
   sort_order: number
   created_at: string
   updated_at: string
