@@ -89,13 +89,14 @@ ${existingBlock}
 
 Your job: suggest 10 questions to prepare for this ${interviewLabel} interview.
 
-Priority rules:
-1. Pull relevant questions directly from the question bank — prefer surfacing existing questions over inventing new ones
-2. For a "${interviewLabel}" interview, prioritize ${interviewType ?? 'relevant'} questions from the bank
-3. Include questions from other categories only if they're genuinely applicable to this interview type (e.g. a portfolio review often involves behavioral follow-ups)
-4. Only generate new questions (not in the bank) if the bank is sparse or missing important areas
-5. For bank questions, use the EXACT wording from the bank
-6. Do not include any questions from "Already added to prep"
+CRITICAL rules about the question bank:
+1. The bank is your PRIMARY source — always prefer it over generating new questions
+2. For each topic area, check the bank FIRST. If a bank question covers the same intent — even if you'd word it differently — use the BANK VERSION EXACTLY, do not paraphrase or create a similar new one
+3. For a "${interviewLabel}" interview, prioritize ${interviewType ?? 'relevant'} questions from the bank
+4. Include questions from other categories only if genuinely relevant to this interview type
+5. Only generate a new question if NO bank question covers that topic at all
+6. Generating a near-duplicate of a bank question is the worst outcome — always match to bank when in doubt
+7. Do not include any questions from "Already added to prep"
 
 Return a JSON array:
 [
@@ -107,7 +108,7 @@ Return a JSON array:
   }
 ]
 
-Set "fromBank": true if the question was taken from the bank, false if newly generated.
+Set "fromBank": true if the question was taken verbatim from the bank, false if newly generated.
 Return only valid JSON, no markdown, no explanation.`
 
   try {

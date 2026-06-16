@@ -19,7 +19,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
       .from('question_bank')
       .select('question, category')
       .order('sort_order', { ascending: true })
-      .returns<Pick<QuestionBankEntry, 'question' | 'category'>>(),
+      .returns<Pick<QuestionBankEntry, 'question' | 'category'>[]>(),
   ])
 
   if (!job) notFound()

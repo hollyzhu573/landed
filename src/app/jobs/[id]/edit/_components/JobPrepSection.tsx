@@ -1,8 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, RotateCcw, BookMarked } from 'lucide-react'
-import { createJobPrepQuestions, updateJobPrepAnswer, deleteJobPrepQuestion } from '@/src/app/jobs/prep-actions'
+import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, RotateCcw, BookMarked, Plus } from 'lucide-react'
+import {
+  createJobPrepQuestions,
+  createBlankJobPrepQuestion,
+  updateJobPrepQuestion,
+  updateJobPrepAnswer,
+  deleteJobPrepQuestion,
+  saveToQuestionBank,
+} from '@/src/app/jobs/prep-actions'
 import type { Job, JobPrepQuestion, PrepCategory } from '@/src/lib/types'
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -61,12 +68,39 @@ function isValidCategory(s: string): s is PrepCategory {
 
 // ── PrepCard ──────────────────────────────────────────────────────────────────
 
-function PrepCard({ q, onDelete }: { q: JobPrepQuestion; onDelete: () => void }) {
-  const [answer,    setAnswer]    = useState(q.answer)
-  const [expanded,  setExpanded]  = useState(!q.answer)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [hovered,   setHovered]   = useState(false)
-  const answerRef = useRef<HTMLTextAreaElement>(null)
+function PrepCard({
+  q,
+  autoFocus,
+  bankQuestions,
+  onDelete,
+}: {
+  q: JobPrepQuestion
+  autoFocus?: boolean
+  bankQuestions: BankQuestion[]
+  onDelete: () => void
+}) {
+  const [question,    setQuestion]    = useState(q.question)
+  const [answer,      setAnswer]      = useState(q.answer)
+  const [expanded,    setExpanded]    = useState(!q.answer)
+  const [saveState,   setSaveState]   = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [hovered,     setHovered]     = useState(false)
+  const [bankState,   setBankState]   = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  const questionRef = useRef<HTMLTextAreaElement>(null)
+  const answerRef   = useRef<HTMLTextAreaElement>(null)
+
+  const inBank = bankQuestions.some(b => b.question.trim().toLowerCase() === question.trim().toLowerCase())
+
+  useEffect(() => {
+    if (autoFocus && questionRef.current) {
+      questionRef.current.focus()
+      setExpanded(true)
+    }
+  }, [autoFocus])
+
+  useEffect(() => {
+    if (questionRef.current) autoResize(questionRef.current)
+  }, [])
 
   useEffect(() => {
     if (expanded && answerRef.current) autoResize(answerRef.current)
@@ -89,6 +123,24 @@ function PrepCard({ q, onDelete }: { q: JobPrepQuestion; onDelete: () => void })
     const t = setTimeout(() => saveAnswer(answer), 800)
     return () => clearTimeout(t)
   }, [answer, q.answer, saveAnswer])
+
+  useEffect(() => {
+    if (question === q.question) return
+    const t = setTimeout(() => updateJobPrepQuestion(q.id, question), 800)
+    return () => clearTimeout(t)
+  }, [question, q.question, q.id])
+
+  async function handleSaveToBank() {
+    if (bankState !== 'idle' || !question.trim()) return
+    setBankState('saving')
+    try {
+      await saveToQuestionBank(question, q.category)
+      setBankState('saved')
+      setTimeout(() => setBankState('idle'), 2500)
+    } catch {
+      setBankState('idle')
+    }
+  }
 
   async function handleDelete() {
     try {
@@ -113,7 +165,14 @@ function PrepCard({ q, onDelete }: { q: JobPrepQuestion; onDelete: () => void })
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-medium leading-snug text-zinc-800">{q.question}</p>
+          <textarea
+            ref={questionRef}
+            value={question}
+            onChange={e => { setQuestion(e.target.value); autoResize(e.target) }}
+            rows={1}
+            placeholder="What's the question?"
+            className="w-full resize-none overflow-hidden bg-transparent text-[14px] font-medium leading-snug text-zinc-800 placeholder:text-zinc-300 focus:outline-none"
+          />
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_STYLES[q.category]}`}>
               {CATEGORY_LABELS[q.category]}
@@ -130,6 +189,26 @@ function PrepCard({ q, onDelete }: { q: JobPrepQuestion; onDelete: () => void })
             {saveState === 'saved'  && <span className="flex items-center gap-1 text-zinc-300"><Check size={10} /> Saved</span>}
             {saveState === 'error'  && <span className="text-red-300">Error</span>}
           </span>
+
+          {/* Save to bank */}
+          {!inBank && (
+            <button
+              onClick={handleSaveToBank}
+              disabled={bankState === 'saving' || !question.trim()}
+              className="flex items-center gap-1 text-[11px] text-zinc-300 transition-colors hover:text-zinc-500 disabled:opacity-40"
+              title="Save to question bank"
+            >
+              <BookMarked size={12} />
+              {bankState === 'saved' ? 'Saved!' : '→ bank'}
+            </button>
+          )}
+          {inBank && (
+            <span className="flex items-center gap-1 text-[11px] text-zinc-200" title="Already in question bank">
+              <BookMarked size={11} />
+              in bank
+            </span>
+          )}
+
           <button onClick={handleDelete} className="text-zinc-200 transition-colors hover:text-zinc-400" aria-label="Delete">
             <Trash2 size={13} />
           </button>
@@ -273,11 +352,7 @@ function PrepSuggestions({
           </span>
         </div>
         {!loading && suggestions.length > 0 && (
-          <button
-            onClick={generate}
-            className="text-zinc-300 transition-colors hover:text-zinc-500"
-            aria-label="Regenerate"
-          >
+          <button onClick={generate} className="text-zinc-300 transition-colors hover:text-zinc-500" aria-label="Regenerate">
             <RotateCcw size={12} />
           </button>
         )}
@@ -285,9 +360,7 @@ function PrepSuggestions({
 
       {loading && (
         <div className="space-y-2">
-          <p className="text-[11px] text-zinc-400">
-            Pulling from your bank and generating questions…
-          </p>
+          <p className="text-[11px] text-zinc-400">Pulling from your bank and generating questions…</p>
           {[60, 45, 70, 50, 65, 40, 55, 48].map((w, i) => (
             <div key={i} className="h-3 animate-pulse rounded bg-violet-100" style={{ width: `${w}%` }} />
           ))}
@@ -305,10 +378,7 @@ function PrepSuggestions({
         <>
           <div className="space-y-1">
             {suggestions.map((s, i) => (
-              <label
-                key={i}
-                className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-white/60"
-              >
+              <label key={i} className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-white/60">
                 <input
                   type="checkbox"
                   checked={selected.has(i)}
@@ -369,7 +439,9 @@ export default function JobPrepSection({
   const [questions,     setQuestions]     = useState(initialQuestions)
   const [interviewType, setInterviewType] = useState<PrepCategory | null>(null)
   const [instructions,  setInstructions]  = useState('')
+  const [adding,        setAdding]        = useState(false)
   const instructionsRef = useRef<HTMLTextAreaElement>(null)
+  const newIdRef        = useRef<string | null>(null)
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -381,7 +453,6 @@ export default function JobPrepSection({
     } catch { /* ignore */ }
   }, [job.id])
 
-  // Persist interview type
   useEffect(() => {
     try {
       if (interviewType) {
@@ -392,7 +463,6 @@ export default function JobPrepSection({
     } catch { /* ignore */ }
   }, [interviewType, job.id])
 
-  // Persist instructions
   useEffect(() => {
     try {
       localStorage.setItem(`interview-instructions:${job.id}`, instructions)
@@ -402,6 +472,17 @@ export default function JobPrepSection({
   useEffect(() => {
     if (instructionsRef.current) autoResize(instructionsRef.current)
   }, [instructions])
+
+  async function handleAddQuestion() {
+    setAdding(true)
+    try {
+      const q = await createBlankJobPrepQuestion(job.id)
+      newIdRef.current = q.id
+      setQuestions(prev => [...prev, q])
+    } finally {
+      setAdding(false)
+    }
+  }
 
   function handleAdd(newQs: JobPrepQuestion[]) {
     setQuestions(prev => [...prev, ...newQs])
@@ -464,13 +545,32 @@ export default function JobPrepSection({
         </div>
       </div>
 
+      {/* Question list */}
       {questions.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-zinc-100 pt-4">
           {questions.map(q => (
-            <PrepCard key={q.id} q={q} onDelete={() => handleDelete(q.id)} />
+            <PrepCard
+              key={q.id}
+              q={q}
+              autoFocus={q.id === newIdRef.current}
+              bankQuestions={bankQuestions}
+              onDelete={() => handleDelete(q.id)}
+            />
           ))}
         </div>
       )}
+
+      {/* Add question manually */}
+      <div className={questions.length > 0 ? 'mt-3' : 'mt-1'}>
+        <button
+          onClick={handleAddQuestion}
+          disabled={adding}
+          className="flex items-center gap-1.5 text-[12px] text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-40"
+        >
+          <Plus size={13} />
+          Add question
+        </button>
+      </div>
     </div>
   )
 }
