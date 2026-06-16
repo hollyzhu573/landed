@@ -97,3 +97,12 @@ export async function saveToQuestionBank(question: string, category: PrepCategor
 
   if (error) throw new Error(error.message)
 }
+
+export async function updateQuestionsOrder(updates: { id: string; sort_order: number }[]): Promise<void> {
+  const supabase = await createClient()
+  await Promise.all(
+    updates.map(({ id, sort_order }) =>
+      supabase.from('job_prep_questions').update({ sort_order }).eq('id', id),
+    ),
+  )
+}

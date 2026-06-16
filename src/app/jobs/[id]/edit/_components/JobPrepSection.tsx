@@ -1,7 +1,28 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Sparkles, ChevronDown, ChevronRight, Trash2, Check, RotateCcw, BookMarked, Plus } from 'lucide-react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import TiptapUnderline from '@tiptap/extension-underline'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  Sparkles, ChevronDown, ChevronRight, Trash2, Check, RotateCcw,
+  BookMarked, Plus, Bold, Italic, Underline, List, GripVertical,
+} from 'lucide-react'
 import {
   createJobPrepQuestions,
   createBlankJobPrepQuestion,
@@ -9,6 +30,7 @@ import {
   updateJobPrepAnswer,
   deleteJobPrepQuestion,
   saveToQuestionBank,
+  updateQuestionsOrder,
 } from '@/src/app/jobs/prep-actions'
 import type { Job, JobPrepQuestion, PrepCategory } from '@/src/lib/types'
 
@@ -66,30 +88,94 @@ function isValidCategory(s: string): s is PrepCategory {
   return ['behavioral', 'portfolio', 'case_study', 'technical', 'other'].includes(s)
 }
 
+function toHtml(text: string): string {
+  if (!text) return ''
+  if (text.trim().startsWith('<')) return text
+  return text.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('')
+}
+
+// ── ToolbarButton ─────────────────────────────────────────────────────────────
+
+function ToolbarButton({
+  onClick,
+  active,
+  label,
+  children,
+}: {
+  onClick: () => void
+  active: boolean
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={e => { e.preventDefault(); onClick() }}
+      className={`rounded px-1.5 py-1 transition-colors ${active ? 'bg-zinc-100 text-zinc-700' : 'text-zinc-300 hover:text-zinc-600'}`}
+      title={label}
+    >
+      {children}
+    </button>
+  )
+}
+
 // ── PrepCard ──────────────────────────────────────────────────────────────────
 
 function PrepCard({
   q,
   autoFocus,
   bankQuestions,
+  dragHandleRef,
+  dragHandleProps,
   onDelete,
 }: {
   q: JobPrepQuestion
   autoFocus?: boolean
   bankQuestions: BankQuestion[]
+  dragHandleRef?: (el: HTMLButtonElement | null) => void
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>
   onDelete: () => void
 }) {
-  const [question,    setQuestion]    = useState(q.question)
-  const [answer,      setAnswer]      = useState(q.answer)
-  const [expanded,    setExpanded]    = useState(!q.answer)
-  const [saveState,   setSaveState]   = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [hovered,     setHovered]     = useState(false)
-  const [bankState,   setBankState]   = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [question,  setQuestion]  = useState(q.question)
+  const [expanded,  setExpanded]  = useState(!q.answer || q.answer === '<p></p>')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [hovered,   setHovered]   = useState(false)
+  const [bankState, setBankState] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   const questionRef = useRef<HTMLTextAreaElement>(null)
-  const answerRef   = useRef<HTMLTextAreaElement>(null)
+  const saveTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const inBank = bankQuestions.some(b => b.question.trim().toLowerCase() === question.trim().toLowerCase())
+  const inBank = bankQuestions.some(
+    b => b.question.trim().toLowerCase() === question.trim().toLowerCase(),
+  )
+
+  const saveAnswer = useCallback(async (html: string) => {
+    setSaveState('saving')
+    try {
+      await updateJobPrepAnswer(q.id, html)
+      setSaveState('saved')
+      setTimeout(() => setSaveState('idle'), 2000)
+    } catch {
+      setSaveState('error')
+      setTimeout(() => setSaveState('idle'), 3000)
+    }
+  }, [q.id])
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [StarterKit, TiptapUnderline],
+    content: toHtml(q.answer),
+    editorProps: {
+      attributes: {
+        class: 'outline-none text-[14px] leading-relaxed text-zinc-700 min-h-[56px]',
+      },
+    },
+    onUpdate: ({ editor: e }) => {
+      const html = e.getHTML()
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => saveAnswer(html), 800)
+    },
+  })
 
   useEffect(() => {
     if (autoFocus && questionRef.current) {
@@ -103,32 +189,14 @@ function PrepCard({
   }, [])
 
   useEffect(() => {
-    if (expanded && answerRef.current) autoResize(answerRef.current)
-  }, [expanded])
-
-  const saveAnswer = useCallback(async (value: string) => {
-    setSaveState('saving')
-    try {
-      await updateJobPrepAnswer(q.id, value)
-      setSaveState('saved')
-      setTimeout(() => setSaveState('idle'), 2000)
-    } catch {
-      setSaveState('error')
-      setTimeout(() => setSaveState('idle'), 3000)
-    }
-  }, [q.id])
-
-  useEffect(() => {
-    if (answer === q.answer) return
-    const t = setTimeout(() => saveAnswer(answer), 800)
-    return () => clearTimeout(t)
-  }, [answer, q.answer, saveAnswer])
-
-  useEffect(() => {
     if (question === q.question) return
     const t = setTimeout(() => updateJobPrepQuestion(q.id, question), 800)
     return () => clearTimeout(t)
   }, [question, q.question, q.id])
+
+  useEffect(() => {
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  }, [])
 
   async function handleSaveToBank() {
     if (bankState !== 'idle' || !question.trim()) return
@@ -156,6 +224,18 @@ function PrepCard({
       onMouseLeave={() => setHovered(false)}
     >
       <div className="flex items-start gap-2 px-4 pt-3 pb-2">
+        {/* Drag handle */}
+        <button
+          ref={dragHandleRef}
+          {...dragHandleProps}
+          type="button"
+          className="mt-[3px] shrink-0 cursor-grab text-zinc-200 transition-colors hover:text-zinc-400 active:cursor-grabbing"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </button>
+
+        {/* Expand / collapse */}
         <button
           onClick={() => setExpanded(e => !e)}
           className="mt-[3px] shrink-0 text-zinc-300 transition-colors hover:text-zinc-500"
@@ -190,7 +270,6 @@ function PrepCard({
             {saveState === 'error'  && <span className="text-red-300">Error</span>}
           </span>
 
-          {/* Save to bank */}
           {!inBank && (
             <button
               onClick={handleSaveToBank}
@@ -216,17 +295,67 @@ function PrepCard({
       </div>
 
       {expanded && (
-        <div className="border-t border-zinc-50 px-4 py-3 pl-10">
-          <textarea
-            ref={answerRef}
-            value={answer}
-            onChange={e => { setAnswer(e.target.value); autoResize(e.target) }}
-            placeholder="Notes, key points, things to remember…"
-            rows={3}
-            className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-zinc-700 placeholder:text-zinc-300 focus:outline-none"
-          />
+        <div className="border-t border-zinc-50 px-4 pt-2 pb-3 pl-10">
+          {/* Formatting toolbar */}
+          {editor && (
+            <div className="mb-1.5 flex items-center gap-0.5 border-b border-zinc-50 pb-1.5">
+              <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} label="Bold">
+                <Bold size={12} />
+              </ToolbarButton>
+              <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} label="Italic">
+                <Italic size={12} />
+              </ToolbarButton>
+              <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} label="Underline">
+                <Underline size={12} />
+              </ToolbarButton>
+              <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} label="Bullet list">
+                <List size={12} />
+              </ToolbarButton>
+            </div>
+          )}
+
+          {/* Rich text editor */}
+          <div className="[&_em]:italic [&_li]:my-0.5 [&_p]:my-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:list-disc [&_ul]:pl-4">
+            <EditorContent editor={editor} placeholder="Notes, key points, things to remember…" />
+          </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── SortablePrepCard ──────────────────────────────────────────────────────────
+
+function SortablePrepCard(props: {
+  q: JobPrepQuestion
+  autoFocus?: boolean
+  bankQuestions: BankQuestion[]
+  onDelete: () => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.q.id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
+      <PrepCard
+        {...props}
+        dragHandleRef={setActivatorNodeRef as (el: HTMLButtonElement | null) => void}
+        dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLElement>}
+      />
     </div>
   )
 }
@@ -443,6 +572,10 @@ export default function JobPrepSection({
   const instructionsRef = useRef<HTMLTextAreaElement>(null)
   const newIdRef        = useRef<string | null>(null)
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  )
+
   // Restore from localStorage on mount
   useEffect(() => {
     try {
@@ -472,6 +605,18 @@ export default function JobPrepSection({
   useEffect(() => {
     if (instructionsRef.current) autoResize(instructionsRef.current)
   }, [instructions])
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = questions.findIndex(q => q.id === active.id)
+    const newIndex = questions.findIndex(q => q.id === over.id)
+    const reordered = arrayMove(questions, oldIndex, newIndex)
+    setQuestions(reordered)
+
+    await updateQuestionsOrder(reordered.map((q, i) => ({ id: q.id, sort_order: i })))
+  }
 
   async function handleAddQuestion() {
     setAdding(true)
@@ -548,15 +693,19 @@ export default function JobPrepSection({
       {/* Question list */}
       {questions.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-zinc-100 pt-4">
-          {questions.map(q => (
-            <PrepCard
-              key={q.id}
-              q={q}
-              autoFocus={q.id === newIdRef.current}
-              bankQuestions={bankQuestions}
-              onDelete={() => handleDelete(q.id)}
-            />
-          ))}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
+              {questions.map(q => (
+                <SortablePrepCard
+                  key={q.id}
+                  q={q}
+                  autoFocus={q.id === newIdRef.current}
+                  bankQuestions={bankQuestions}
+                  onDelete={() => handleDelete(q.id)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
