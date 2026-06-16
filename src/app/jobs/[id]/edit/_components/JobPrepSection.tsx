@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TiptapUnderline from '@tiptap/extension-underline'
+import Placeholder from '@tiptap/extension-placeholder'
 import {
   DndContext,
   closestCenter,
@@ -163,7 +164,11 @@ function PrepCard({
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit, TiptapUnderline],
+    extensions: [
+      StarterKit,
+      TiptapUnderline,
+      Placeholder.configure({ placeholder: 'Notes, key points, things to remember…' }),
+    ],
     content: toHtml(q.answer),
     editorProps: {
       attributes: {
@@ -314,10 +319,7 @@ function PrepCard({
             </div>
           )}
 
-          {/* Rich text editor */}
-          <div className="[&_em]:italic [&_li]:my-0.5 [&_p]:my-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:list-disc [&_ul]:pl-4">
-            <EditorContent editor={editor} placeholder="Notes, key points, things to remember…" />
-          </div>
+          <EditorContent editor={editor} />
         </div>
       )}
     </div>

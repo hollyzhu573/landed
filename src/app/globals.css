@@ -172,6 +172,45 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
+/* ─── ProseMirror (Tiptap rich text editor) ─────────────────────────────── */
+
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+.ProseMirror strong {
+  font-weight: 600;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror u {
+  text-decoration: underline;
+}
+
+.ProseMirror ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.ProseMirror li {
+  margin: 2px 0;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #d4d4d8;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
 /* ─── Component classes ─────────────────────────────────────────────────── */
 
 .card {
