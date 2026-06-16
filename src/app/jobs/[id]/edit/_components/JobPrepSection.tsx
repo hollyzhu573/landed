@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TiptapUnderline from '@tiptap/extension-underline'
@@ -120,6 +120,92 @@ function ToolbarButton({
   )
 }
 
+// ── AnswerEditor ──────────────────────────────────────────────────────────────
+// Separate component so useEditor runs fresh on mount (only when card is expanded)
+
+function AnswerEditor({
+  questionId,
+  initialContent,
+  onSaveStateChange,
+}: {
+  questionId: string
+  initialContent: string
+  onSaveStateChange: (state: 'idle' | 'saving' | 'saved' | 'error') => void
+}) {
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
+    extensions: [
+      StarterKit,
+      TiptapUnderline,
+      Placeholder.configure({ placeholder: 'Notes, key points, things to remember…' }),
+    ],
+    content: toHtml(initialContent),
+    editorProps: {
+      attributes: {
+        class: 'outline-none text-[14px] leading-relaxed text-zinc-700 min-h-[56px]',
+      },
+    },
+    onUpdate: ({ editor: e }) => {
+      const html = e.getHTML()
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(async () => {
+        onSaveStateChange('saving')
+        try {
+          await updateJobPrepAnswer(questionId, html)
+          onSaveStateChange('saved')
+          setTimeout(() => onSaveStateChange('idle'), 2000)
+        } catch {
+          onSaveStateChange('error')
+          setTimeout(() => onSaveStateChange('idle'), 3000)
+        }
+      }, 800)
+    },
+  })
+
+  useEffect(() => {
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  }, [])
+
+  return (
+    <div className="border-t border-zinc-50 px-4 pt-2 pb-3 pl-10">
+      <div className="mb-1.5 flex items-center gap-0.5 border-b border-zinc-50 pb-1.5">
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          active={editor?.isActive('bold') ?? false}
+          label="Bold"
+        >
+          <Bold size={12} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          active={editor?.isActive('italic') ?? false}
+          label="Italic"
+        >
+          <Italic size={12} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          active={editor?.isActive('underline') ?? false}
+          label="Underline"
+        >
+          <Underline size={12} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+          active={editor?.isActive('bulletList') ?? false}
+          label="Bullet list"
+        >
+          <List size={12} />
+        </ToolbarButton>
+      </div>
+      <EditorContent editor={editor} />
+    </div>
+  )
+}
+
 // ── PrepCard ──────────────────────────────────────────────────────────────────
 
 function PrepCard({
@@ -144,43 +230,10 @@ function PrepCard({
   const [bankState, setBankState] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   const questionRef = useRef<HTMLTextAreaElement>(null)
-  const saveTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const inBank = bankQuestions.some(
     b => b.question.trim().toLowerCase() === question.trim().toLowerCase(),
   )
-
-  const saveAnswer = useCallback(async (html: string) => {
-    setSaveState('saving')
-    try {
-      await updateJobPrepAnswer(q.id, html)
-      setSaveState('saved')
-      setTimeout(() => setSaveState('idle'), 2000)
-    } catch {
-      setSaveState('error')
-      setTimeout(() => setSaveState('idle'), 3000)
-    }
-  }, [q.id])
-
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      TiptapUnderline,
-      Placeholder.configure({ placeholder: 'Notes, key points, things to remember…' }),
-    ],
-    content: toHtml(q.answer),
-    editorProps: {
-      attributes: {
-        class: 'outline-none text-[14px] leading-relaxed text-zinc-700 min-h-[56px]',
-      },
-    },
-    onUpdate: ({ editor: e }) => {
-      const html = e.getHTML()
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => saveAnswer(html), 800)
-    },
-  })
 
   useEffect(() => {
     if (autoFocus && questionRef.current) {
@@ -198,10 +251,6 @@ function PrepCard({
     const t = setTimeout(() => updateJobPrepQuestion(q.id, question), 800)
     return () => clearTimeout(t)
   }, [question, q.question, q.id])
-
-  useEffect(() => {
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [])
 
   async function handleSaveToBank() {
     if (bankState !== 'idle' || !question.trim()) return
@@ -300,27 +349,11 @@ function PrepCard({
       </div>
 
       {expanded && (
-        <div className="border-t border-zinc-50 px-4 pt-2 pb-3 pl-10">
-          {/* Formatting toolbar */}
-          {editor && (
-            <div className="mb-1.5 flex items-center gap-0.5 border-b border-zinc-50 pb-1.5">
-              <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} label="Bold">
-                <Bold size={12} />
-              </ToolbarButton>
-              <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} label="Italic">
-                <Italic size={12} />
-              </ToolbarButton>
-              <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} label="Underline">
-                <Underline size={12} />
-              </ToolbarButton>
-              <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} label="Bullet list">
-                <List size={12} />
-              </ToolbarButton>
-            </div>
-          )}
-
-          <EditorContent editor={editor} />
-        </div>
+        <AnswerEditor
+          questionId={q.id}
+          initialContent={q.answer}
+          onSaveStateChange={setSaveState}
+        />
       )}
     </div>
   )
